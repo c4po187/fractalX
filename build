@@ -1,0 +1,1 @@
+g++ -std=c++0x -g shaderman.cpp main.cpp -o fx -lGL -lGLU -lglut -lGLEW
