@@ -19,15 +19,15 @@ static const float vertices[] = {
 	-1.0, -1.0, 0.0,
 	1.0, -1.0, 0.0
 };
-static float color0[] = { 1.0, 1.0, 1.0, 1.0 };
-static float color1[] = { 0.15, 0.3, 0.45, 1.0 };
-static float color2[] = { 0.45, 0.6, 0.75, 1.0 };
-static float color3[] = { 0.75, 0.9, 1.0, 1.0 };
-static float color4[] = { 1.0, 0.85, 0.7, 1.0 };
-static float color5[] = { 0.7, 0.55, 0.4, 1.0 };
-static float color6[] = { 0.4, 0.25, 0.1, 1.0 };
+static const float color0[] = { 1.0, 1.0, 1.0, 1.0 };
+static const float color1[] = { 0.15, 0.3, 0.45, 1.0 };
+static const float color2[] = { 0.45, 0.6, 0.75, 1.0 };
+static const float color3[] = { 0.75, 0.9, 1.0, 1.0 };
+static const float color4[] = { 1.0, 0.85, 0.7, 1.0 };
+static const float color5[] = { 0.7, 0.55, 0.4, 1.0 };
+static const float color6[] = { 0.4, 0.25, 0.1, 1.0 };
 static float center[] = { -0.5, 0.0, 0.0, 0.0 };
-static float constComplex[] = { -0.0825, -0.65 };
+static float constComplex[] = { 0.1875, 0.565 };
 static float tx, ty, tz, divit = 1.0f;
 static int dx, dy, iterations;
 static bool d = false, doZoom = false, doMove = false, isJulia = true;
@@ -36,6 +36,7 @@ static void init( void )
 {
 	tx = ty = 0.0f;
 	tz = 1.0f;
+	iterations = 256;
 	glGenBuffers( 1, &buffer );
 	glBindBuffer( GL_ARRAY_BUFFER, buffer );
 	glBufferData( GL_ARRAY_BUFFER, sizeof( vertices ), vertices, GL_STATIC_DRAW );
@@ -49,6 +50,26 @@ static void init( void )
 		static_cast< GLdouble >( WIN_HEIGHT ), 
 		-1.0, 1.0 );
 	glMatrixMode( GL_MODELVIEW );
+}
+
+// Creates a <1024 x 4> rainbow texture
+static void createTexture( void )
+{
+	const int SZTX = 1024;
+	GLfloat tx[SZTX][4];
+	
+	for ( int x = 0; x < SZTX - 1; ++x ) {
+		float f = 3.1415927 * x / SZTX;
+		float c = cos( f );
+		float s = sin( f );
+		tx[x][0] = 1.0 - c;
+		tx[x][1] = s * s;
+		tx[x][2] = c;
+		tx[x][3] = 1.0;
+	}
+	
+	tx[SZTX - 1][0] = tx[SZTX - 1][1] = tx[SZTX - 1][2] = tx[SZTX - 1][3] = 0.0;
+	glTexImage1D( GL_TEXTURE_1D, 0, GL_RGBA, SZTX, 0, GL_RGBA, GL_FLOAT, tx );
 }
 
 /*
@@ -193,28 +214,32 @@ int main( int argc, const char * argv[] )
 	std::string set = parser.retrieve< std::string >( "set" );
 	std::string s_iterations = parser.retrieve< std::string >( "iterations" );
 	std::vector< std::string > c_args = parser.retrieve< std::vector< std::string > >( "complex" );
+	
 	if ( set.empty() && c_args.empty() && s_iterations.empty() ) {
 		std::cout << "\nNo parameters supplied, using defaults...\nSET: Mandelbrot\nITERATIONS: 256\n" << std::endl;
 		isJulia = false;
-		iterations = 256;
 	} else {
 		if ( set.empty() ) {
 			std::cout << parser.usage() << std::endl;
 			return 1;
 		} else if ( set == "j" || set == "J" || set == "julia" || set == "Julia" ) {
-			if ( c_args.size() == 3 && ( c_args.at( 1 ) == "+" || c_args.at( 1 ) == "-" ) ) {
-				try {
-					constComplex[0] = strtof( c_args.at( 0 ).c_str(), 0 );
-					constComplex[1] = strtof( c_args.at( 2 ).c_str(), 0 );
-					if ( c_args.at( 1 ) == "-" )
-						constComplex[1] *= -1.0;
-				} catch ( std::exception & e ) {
-					std::cout << e.what() << std::endl;
+			if ( c_args.size() ) {
+				if ( c_args.size() == 3 && ( c_args.at( 1 ) == "+" || c_args.at( 1 ) == "-" ) ) {
+					try {
+						constComplex[0] = strtof( c_args.at( 0 ).c_str(), 0 );
+						constComplex[1] = strtof( c_args.at( 2 ).c_str(), 0 );
+						if ( c_args.at( 1 ) == "-" )
+							constComplex[1] *= -1.0;
+					} catch ( std::exception & e ) {
+						std::cout << e.what() << std::endl;
+					}
+				} else {
+					std::cout << parser.usage() << std::endl;
+					std::cout << "Please enter complex number in correct format: a + bi" << std::endl;
+					return 2;
 				}
 			} else {
-				std::cout << parser.usage() << std::endl;
-				std::cout << "Please enter complex number in correct format: a + bi" << std::endl;
-				return 2;
+				std::cout << "No complex number provided using 0.1875 + 0.565i" << std::endl;
 			}
 		} else if ( set == "m" || set == "M" || set == "mandelbrot" || set == "Mandelbrot" ) {
 			isJulia = false;

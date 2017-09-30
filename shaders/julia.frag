@@ -33,9 +33,9 @@ void main( void )
 	}
 	
 	float k = log( 0.57713 / sqrt( float( count ) / 100 ) );
-	
+
 	if ( count == 0 )
-		gl_FragColor = vec4( 0.1, 0.2, 0.3, 1.0 );
+		gl_FragColor = color3 * k;
 	else if ( count == -1 )
 		gl_FragColor = vec4( 0, 0, 0, 0 );
 	else {
