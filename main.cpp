@@ -29,14 +29,13 @@ static const float color6[] = { 0.4, 0.25, 0.1, 1.0 };
 static float center[] = { -0.5, 0.0, 0.0, 0.0 };
 static float constComplex[] = { 0.1875, 0.565 };
 static float tx, ty, tz, divit = 1.0f;
-static int dx, dy, iterations;
+static int dx, dy, iterations = 256;
 static bool d = false, doZoom = false, doMove = false, isJulia = true;
 
 static void init( void )
 {
 	tx = ty = 0.0f;
 	tz = 1.0f;
-	iterations = 256;
 	glGenBuffers( 1, &buffer );
 	glBindBuffer( GL_ARRAY_BUFFER, buffer );
 	glBufferData( GL_ARRAY_BUFFER, sizeof( vertices ), vertices, GL_STATIC_DRAW );
