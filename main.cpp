@@ -1,6 +1,7 @@
 // Julia (main.cpp)
 
 #include "shaderman.h"
+#include "vertex.h"
 #include "argparse.hpp"
 #include <cmath>
 #include <cstdlib>
@@ -12,13 +13,14 @@
 
 // Globals
 static shaderman * shm;
-static GLuint buffer;
+static GLuint vao, vbo;
 static const float vertices[] = {
 	-1.0, 1.0, 0.0,
 	1.0, 1.0, 0.0,
 	-1.0, -1.0, 0.0,
 	1.0, -1.0, 0.0
 };
+static vertex * verts;
 static const float color0[] = { 1.0, 1.0, 1.0, 1.0 };
 static const float color1[] = { 0.15, 0.3, 0.45, 1.0 };
 static const float color2[] = { 0.45, 0.6, 0.75, 1.0 };
@@ -32,13 +34,63 @@ static float tx, ty, tz, divit = 1.0f;
 static int dx, dy, iterations = 256;
 static bool d = false, doZoom = false, doMove = false, isJulia = true;
 
+static void setupVertexPositions( void )
+{
+	if ( verts ) {
+		verts[0].pos = vec3( -1.0, 1.0, 0.0 );
+		verts[1].pos = vec3( 1.0, 1.0, 0.0 );
+		verts[2].pos = vec3( -1.0, -1.0, 0.0 );
+		verts[3].pos = vec3( 1.0, -1.0, 0.0 );
+	}
+}
+
+static void setupVertexTexCoords( void )
+{
+	if ( verts ) {
+		verts[0].uv = vec2( center[0] - tz, center[1] + tz );
+		verts[1].uv = vec2( center[0] + tz, center[1] + tz );
+		verts[2].uv = vec2( center[0] - tz, center[1] - tz );
+		verts[3].uv = vec2( center[0] + tz, center[1] - tz );
+	}
+}
+
 static void init( void )
 {
 	tx = ty = 0.0f;
 	tz = 1.0f;
-	glGenBuffers( 1, &buffer );
-	glBindBuffer( GL_ARRAY_BUFFER, buffer );
-	glBufferData( GL_ARRAY_BUFFER, sizeof( vertices ), vertices, GL_STATIC_DRAW );
+	verts = static_cast< vertex * >( malloc( 4 * sizeof( vertex ) ) );
+	setupVertexPositions();
+	setupVertexTexCoords();
+	
+	glGenVertexArrays( 1, &vao );
+	glBindVertexArray( vao );
+	glGenBuffers( 1, &vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, vbo );
+	glBufferData( GL_ARRAY_BUFFER, 4 * sizeof( vertex ), verts, GL_STATIC_DRAW );
+	
+	glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof( vertex ), 
+		reinterpret_cast< void * >( offsetof( vertex, pos ) ) );
+	glEnableVertexAttribArray( 0 );
+	glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof( vertex ),
+		reinterpret_cast< void * >( offsetof( vertex, uv ) ) );
+	glEnableVertexAttribArray( 1 );
+	glBindVertexArray( 0 );
+	
+	// One timers
+	if ( shm ) {
+		glUseProgram( shm->getProgram() );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color0" ), 1, color0 );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color1" ), 1, color1 );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color2" ), 1, color2 );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color3" ), 1, color3 );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color4" ), 1, color4 );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color5" ), 1, color5 );
+		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color6" ), 1, color6 );
+		glUniform2fv( glGetUniformLocation( shm->getProgram(), "const_complex" ), 1, constComplex );
+		glUniform1i( glGetUniformLocation( shm->getProgram(), "is_julia" ), isJulia );
+		glUniform1i( glGetUniformLocation( shm->getProgram(), "iterations" ), iterations );
+	}
+	
 	glViewport( 0, 0, WIN_WIDTH, WIN_HEIGHT );
 	glClearColor( 0.0, 0.0, 0.0, 1.0 );
 	glMatrixMode( GL_PROJECTION );
@@ -169,19 +221,9 @@ void cb_render( void )
 	
 	if ( shm ) {
 		glUseProgram( shm->getProgram() );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color0" ), 1, color0 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color1" ), 1, color1 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color2" ), 1, color2 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color3" ), 1, color3 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color4" ), 1, color4 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color5" ), 1, color5 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color6" ), 1, color6 );
 		glUniform4fv( glGetUniformLocation( shm->getProgram(), "center" ), 1, center );
-		glUniform2fv( glGetUniformLocation( shm->getProgram(), "const_complex" ), 1, constComplex );
 		glUniform1f( glGetUniformLocation( shm->getProgram(), "aspect" ), 
 			static_cast< float >( WIN_WIDTH / WIN_HEIGHT ) );
-		glUniform1i( glGetUniformLocation( shm->getProgram(), "is_julia" ), isJulia );
-		glUniform1i( glGetUniformLocation( shm->getProgram(), "iterations" ), iterations );
 		
 		if ( doZoom ) {
 			glScalef( tz, tz, tz );
@@ -190,7 +232,7 @@ void cb_render( void )
 		}
 			
 		glEnableClientState( GL_VERTEX_ARRAY );
-		glBindBuffer( GL_ARRAY_BUFFER, buffer );
+		glBindBuffer( GL_ARRAY_BUFFER, vbo );
 		glVertexPointer( 3, GL_FLOAT, 0, 0 );
 		glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
 		glDisableClientState( GL_VERTEX_ARRAY );
@@ -246,17 +288,32 @@ int main( int argc, const char * argv[] )
 			std::cout << parser.usage() << std::endl;
 			return 3;
 		}
-		try {
-			iterations = atoi( s_iterations.c_str() );
-		} catch ( std::exception & e ) {
-			std::cout << e.what() << std::endl;
+		if ( !s_iterations.empty() ) {
+			try {
+				iterations = atoi( s_iterations.c_str() );
+			} catch ( std::exception & e ) {
+				std::cout << e.what() << std::endl;
+			}
+		}
+		// Display set params
+		std::cout << "Running FractalX with specified parameters..." << std::endl;
+		std::cout << "SET: ";
+		if ( isJulia )
+			std::cout << "Julia" << std::endl;
+		else
+			std::cout << "Mandelbrot" << std::endl;
+		std::cout << "ITERATIONS: " << iterations << std::endl;
+		if ( isJulia ) {
+			std::cout << "COMPLEX: " << constComplex[0];
+			char s = ( c_args.empty() ) ? '+' : c_args.at( 1 )[0];
+			std::cout << ' ' << s << ' ' << fabs( constComplex[1] ) << "i\n" << std::endl;
 		}
 	}
 		
 	glutInit( &argc, const_cast< char ** >( argv ) );
 	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE );
 	glutInitWindowSize( WIN_WIDTH, WIN_HEIGHT );
-	glutCreateWindow( "Julia Set Renderer" );
+	glutCreateWindow( "FractalX : OpenGL Fractal Explorer" );
 	
 	if ( glewInit() != GLEW_OK ) {
 		std::cout << "Glew failed to init, exiting..." << std::endl;
@@ -282,6 +339,8 @@ int main( int argc, const char * argv[] )
 	glutMainLoop();
 	
 	delete shm;
+	if ( verts ) free( verts );
+	
 	return 0;
 }
 
