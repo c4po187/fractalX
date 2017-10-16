@@ -1,14 +1,6 @@
 #version 440
 
-uniform highp vec4 color0;
-uniform highp vec4 color1;
-uniform highp vec4 color2;
-uniform highp vec4 color3;
-uniform highp vec4 color4;
-uniform highp vec4 color5;
-uniform highp vec4 color6;
 uniform highp vec2 const_complex;
-in vec2 txCoords;
 uniform sampler1D rainbow_tx;
 uniform bool is_julia;
 uniform int iterations;

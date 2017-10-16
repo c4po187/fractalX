@@ -16,14 +16,6 @@
 static shaderman * shm;
 static GLuint vao, vbo, vtx;
 static vertex * verts;
-static GLfloat rtex[SZTX][4];
-static const float color0[] = { 1.0, 1.0, 1.0, 1.0 };
-static const float color1[] = { 0.15, 0.3, 0.45, 1.0 };
-static const float color2[] = { 0.45, 0.6, 0.75, 1.0 };
-static const float color3[] = { 0.75, 0.9, 1.0, 1.0 };
-static const float color4[] = { 1.0, 0.85, 0.7, 1.0 };
-static const float color5[] = { 0.7, 0.55, 0.4, 1.0 };
-static const float color6[] = { 0.4, 0.25, 0.1, 1.0 };
 static float center[] = { -0.5, 0.0, 0.0, 0.0 };
 static float constComplex[] = { 0.1875, 0.565 };
 static float tx, ty, tz, divit = 1.0f;
@@ -53,6 +45,8 @@ static void setupVertexTexCoords( void )
 // Creates a rainbow texture
 static void createTexture( void )
 {	
+	GLfloat rtex[SZTX][4];
+	
 	for ( int x = 0; x < SZTX - 1; ++x ) {
 		float f = 3.1415927 * x / SZTX;
 		float c = cos( f );
@@ -98,13 +92,6 @@ static void init( void )
 	// One timers
 	if ( shm ) {
 		glUseProgram( shm->getProgram() );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color0" ), 1, color0 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color1" ), 1, color1 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color2" ), 1, color2 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color3" ), 1, color3 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color4" ), 1, color4 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color5" ), 1, color5 );
-		glUniform4fv( glGetUniformLocation( shm->getProgram(), "color6" ), 1, color6 );
 		glUniform2fv( glGetUniformLocation( shm->getProgram(), "const_complex" ), 1, constComplex );
 		glUniform1i( glGetUniformLocation( shm->getProgram(), "is_julia" ), isJulia );
 		glUniform1i( glGetUniformLocation( shm->getProgram(), "iterations" ), iterations );
