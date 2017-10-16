@@ -10,17 +10,13 @@
 #define WIN_HEIGHT 960
 #define ZMOD 0.01f
 #define XYMOD 0.0085f
+#define SZTX 1024
 
 // Globals
 static shaderman * shm;
-static GLuint vao, vbo;
-static const float vertices[] = {
-	-1.0, 1.0, 0.0,
-	1.0, 1.0, 0.0,
-	-1.0, -1.0, 0.0,
-	1.0, -1.0, 0.0
-};
+static GLuint vao, vbo, vtx;
 static vertex * verts;
+static GLfloat rtex[SZTX][4];
 static const float color0[] = { 1.0, 1.0, 1.0, 1.0 };
 static const float color1[] = { 0.15, 0.3, 0.45, 1.0 };
 static const float color2[] = { 0.45, 0.6, 0.75, 1.0 };
@@ -32,15 +28,15 @@ static float center[] = { -0.5, 0.0, 0.0, 0.0 };
 static float constComplex[] = { 0.1875, 0.565 };
 static float tx, ty, tz, divit = 1.0f;
 static int dx, dy, iterations = 256;
-static bool d = false, doZoom = false, doMove = false, isJulia = true;
+static bool d = false, isJulia = true;
 
 static void setupVertexPositions( void )
 {
 	if ( verts ) {
-		verts[0].pos = vec3( -1.0, 1.0, 0.0 );
-		verts[1].pos = vec3( 1.0, 1.0, 0.0 );
-		verts[2].pos = vec3( -1.0, -1.0, 0.0 );
-		verts[3].pos = vec3( 1.0, -1.0, 0.0 );
+		verts[0].pos = vec4( -1.0, 1.0, 0.0, 1.0 );
+		verts[1].pos = vec4( 1.0, 1.0, 0.0, 1.0 );
+		verts[2].pos = vec4( -1.0, -1.0, 0.0, 1.0 );
+		verts[3].pos = vec4( 1.0, -1.0, 0.0, 1.0 );
 	}
 }
 
@@ -54,6 +50,23 @@ static void setupVertexTexCoords( void )
 	}
 }
 
+// Creates a rainbow texture
+static void createTexture( void )
+{	
+	for ( int x = 0; x < SZTX - 1; ++x ) {
+		float f = 3.1415927 * x / SZTX;
+		float c = cos( f );
+		float s = sin( f );
+		rtex[x][0] = 1.0 - c;
+		rtex[x][1] = s * s;
+		rtex[x][2] = c;
+		rtex[x][3] = 1.0;
+	}
+	
+	rtex[SZTX - 1][0] = rtex[SZTX - 1][1] = rtex[SZTX - 1][2] = rtex[SZTX - 1][3] = 0.0;
+	glTexImage1D( GL_TEXTURE_1D, 0, GL_RGBA, SZTX, 0, GL_RGBA, GL_FLOAT, rtex );
+}
+
 static void init( void )
 {
 	tx = ty = 0.0f;
@@ -64,11 +77,17 @@ static void init( void )
 	
 	glGenVertexArrays( 1, &vao );
 	glBindVertexArray( vao );
+	glGenTextures( 1, &vtx );
+	glBindTexture( GL_TEXTURE_1D, vtx );
+	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	glEnable( GL_TEXTURE_1D );
+	createTexture();
 	glGenBuffers( 1, &vbo );
 	glBindBuffer( GL_ARRAY_BUFFER, vbo );
 	glBufferData( GL_ARRAY_BUFFER, 4 * sizeof( vertex ), verts, GL_STATIC_DRAW );
 	
-	glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof( vertex ), 
+	glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, sizeof( vertex ), 
 		reinterpret_cast< void * >( offsetof( vertex, pos ) ) );
 	glEnableVertexAttribArray( 0 );
 	glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof( vertex ),
@@ -103,26 +122,6 @@ static void init( void )
 	glMatrixMode( GL_MODELVIEW );
 }
 
-// Creates a <1024 x 4> rainbow texture
-static void createTexture( void )
-{
-	const int SZTX = 1024;
-	GLfloat tx[SZTX][4];
-	
-	for ( int x = 0; x < SZTX - 1; ++x ) {
-		float f = 3.1415927 * x / SZTX;
-		float c = cos( f );
-		float s = sin( f );
-		tx[x][0] = 1.0 - c;
-		tx[x][1] = s * s;
-		tx[x][2] = c;
-		tx[x][3] = 1.0;
-	}
-	
-	tx[SZTX - 1][0] = tx[SZTX - 1][1] = tx[SZTX - 1][2] = tx[SZTX - 1][3] = 0.0;
-	glTexImage1D( GL_TEXTURE_1D, 0, GL_RGBA, SZTX, 0, GL_RGBA, GL_FLOAT, tx );
-}
-
 /*
 static void viewfix( int x, int y, float * fx, float * fy )
 {
@@ -130,26 +129,23 @@ static void viewfix( int x, int y, float * fx, float * fy )
 	*fy = ( exp( zoom * log( 1.1 ) ) * 2.0 ) / ( WIN_HEIGHT * y + center[1] - exp( zoom * log( 1.1 ) ) );
 }
 */
+
 /*** Callbacks **************************************/
 
 void cb_keyboard( unsigned char key, int x, int y )
 {
 	switch ( key ) {
 		case 'w': 
-			ty += XYMOD * divit; 
-			doMove = true;
+			ty += XYMOD * divit;
 			break;
 		case 's': 
 			ty -= XYMOD * divit; 
-			doMove = true;
 			break;
 		case 'a': 
 			tx -= XYMOD * divit; 
-			doMove = true;
 			break;
 		case 'd': 
-			tx += XYMOD * divit; 
-			doMove = true;
+			tx += XYMOD * divit;
 			break;
 		default: break;
 	}
@@ -164,12 +160,10 @@ void cb_special( int key, int x, int y )
 		case GLUT_KEY_PAGE_UP:
 			divit -= 0.0015f;
 			tz += ZMOD;
-			doZoom = true;
 			break;
 		case GLUT_KEY_PAGE_DOWN:
 			divit += 0.0015f;
 			tz -= ZMOD;
-			doZoom = true;
 			break;
 		default: break;
 	}
@@ -225,16 +219,19 @@ void cb_render( void )
 		glUniform1f( glGetUniformLocation( shm->getProgram(), "aspect" ), 
 			static_cast< float >( WIN_WIDTH / WIN_HEIGHT ) );
 		
-		if ( doZoom ) {
+		if ( tz != 1.0f ) {
 			glScalef( tz, tz, tz );
-			doZoom = false;
 			tz = 1.0f;
 		}
-			
+		
+		glActiveTexture( GL_TEXTURE0 );
+		glBindTexture( GL_TEXTURE_1D, vtx );
 		glEnableClientState( GL_VERTEX_ARRAY );
+		glBindVertexArray( vao );
 		glBindBuffer( GL_ARRAY_BUFFER, vbo );
-		glVertexPointer( 3, GL_FLOAT, 0, 0 );
+		glVertexPointer( 4, GL_FLOAT, 0, 0 );
 		glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
+		glBindVertexArray( 0 );
 		glDisableClientState( GL_VERTEX_ARRAY );
 	} else {
 		std::cout << "Shaderman failure!" << std::endl;
@@ -257,7 +254,7 @@ int main( int argc, const char * argv[] )
 	std::vector< std::string > c_args = parser.retrieve< std::vector< std::string > >( "complex" );
 	
 	if ( set.empty() && c_args.empty() && s_iterations.empty() ) {
-		std::cout << "\nNo parameters supplied, using defaults...\nSET: Mandelbrot\nITERATIONS: 256\n" << std::endl;
+		std::cout << "No parameters supplied, using defaults...\nSET: Mandelbrot\nITERATIONS: 256\n" << std::endl;
 		isJulia = false;
 	} else {
 		if ( set.empty() ) {
@@ -306,8 +303,9 @@ int main( int argc, const char * argv[] )
 		if ( isJulia ) {
 			std::cout << "COMPLEX: " << constComplex[0];
 			char s = ( c_args.empty() ) ? '+' : c_args.at( 1 )[0];
-			std::cout << ' ' << s << ' ' << fabs( constComplex[1] ) << "i\n" << std::endl;
+			std::cout << ' ' << s << ' ' << fabs( constComplex[1] ) << "i" << std::endl;
 		}
+		std::cout << std::endl;
 	}
 		
 	glutInit( &argc, const_cast< char ** >( argv ) );

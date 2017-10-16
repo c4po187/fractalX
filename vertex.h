@@ -8,7 +8,7 @@ using namespace glm;
 
 struct vertex
 {
-	vec3 pos;
+	vec4 pos;
 	vec2 uv;
 };
 

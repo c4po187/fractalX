@@ -8,11 +8,11 @@ uniform highp vec4 color4;
 uniform highp vec4 color5;
 uniform highp vec4 color6;
 uniform highp vec2 const_complex;
+in vec2 txCoords;
+uniform sampler1D rainbow_tx;
 uniform bool is_julia;
 uniform int iterations;
-
 varying vec4 p;
-
 const float threshold = 2.0;
 
 void main( void )
@@ -31,14 +31,10 @@ void main( void )
 		}
 		z = nz;
 	}
+	highp float k = log( float( count ) );
 	
-	highp float k = log( 0.57713 / sqrt( float( count ) / 100 ) );
-
-	if ( count == 0 )
-		gl_FragColor = color3 * k;
-	else if ( count == -1 )
-		gl_FragColor = vec4( 0, 0, 0, 0 );
-	else {
-		gl_FragColor = ( color4 * k ) + ( color1 / log( 1 - k ) );
-	}
+	if ( count < 0 )
+		gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+	else
+		gl_FragColor = texture( rainbow_tx, k ).rgba;
 }
