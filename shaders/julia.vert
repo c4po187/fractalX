@@ -7,6 +7,7 @@ varying vec4 p;
 
 void main( void )
 {
+	gl_TexCoord[0] = gl_MultiTexCoord0;
 	gl_Position = pos * gl_ModelViewProjectionMatrix;
-	p = ( pos + center ) / aspect * vec4( aspect, 1.0, 1.0, 1.0 ); 
+	p = ( pos + center ) / aspect * vec4( aspect, 1.0, 1.0, 1.0 );
 }
